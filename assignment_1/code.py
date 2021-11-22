@@ -9,6 +9,18 @@ import numpy as np
 
 # built-in module
 
+def brightest(data):
+    gray = cv.cvtColor(data, cv.COLOR_BGR2GRAY)
+    (_, _, _, point) = cv.minMaxLoc(gray)
+    return point
+
+def reddest(data):
+    img_hsv = cv.cvtColor(data, cv.COLOR_BGR2HSV)
+    lowerBound = np.array([-5, 0, 100])
+    upperBound = np.array([5, 255, 255])
+    mask = cv.inRange(img_hsv, lowerBound, upperBound)
+    (_, _, _, point) = cv.minMaxLoc(img_hsv[:, :, 1], mask)
+    return point
 
 def main():
 
@@ -18,9 +30,8 @@ def main():
     while True:
         start = time.time()
         _flag, img = vid.read()
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        (_, _, _ , brightestPoint) = cv.minMaxLoc(gray)
-        cv.circle(img, brightestPoint, 10, (0, 0, 255), 2)
+        point = reddest(img)
+        cv.circle(img, point, 9, (0, 0, 255), 2)
         cv.putText(img, 'FPS = '+ str(int(fps)), (10,450), font, 3, (0, 255, 0), 2, cv.LINE_AA)
         cv.imshow('cam', img)
         end = time.time()
@@ -30,11 +41,6 @@ def main():
         ch = cv.waitKey(5)
         if ch == 27:
             break
-    
-    print(a)
-    print(b)
-    print(c)
-    print(d)
     print('Done')
 
 
