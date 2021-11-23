@@ -1,0 +1,18 @@
+
+    The processing time for one video frame or image.
+        The FPS was very varied but was floating around 30-50~
+
+    How does the processing time change when you add the bright spot detection?
+        I did not note any differences, although that might be easier if I had implemented a running average for the FPS counter
+
+    Is the processing time identical when you do not display the image?
+
+
+    How does your for-loop implementation compare to the built-in function?
+        It was notably slower, seemed to have around 20 FPS
+
+    Moving your hand in front of the camera, estimate the latency between image capture and display.
+        250-500 ms maybe?
+
+    Is the latency different when capturing from a mobile phone?
+        
