@@ -15,4 +15,4 @@
         250-500 ms maybe?
 
     Is the latency different when capturing from a mobile phone?
-        
+        I did not note any difference
