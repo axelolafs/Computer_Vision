@@ -18,67 +18,83 @@ def boundaryLines(eq, delta):
 
     return b+bDelta, b-bDelta
 
-def ransac(edges, img):
-    bestPts = np.array([0, 0]), np.array([0, 0])
-    if(cv.countNonZero(edges) == 0):
-        return 0, 0
-    onlyEdges = cv.findNonZero(edges)
-    # print(onlyEdges[:, 0, 1])
-    # rows, columns = edges.shape
-    # onlyEdges = np.array([[0, 0]])
-    # for i in range(rows):
-        # for j in range(columns):
-            # if edges[i, j] != 0:
-                # onlyEdges = np.append(onlyEdges, [[i, j]], axis=0)
-            
-    # sacc = linear_model.RANSACRegressor()
-    # print(np.transpose(onlyEdges[:,0]))
-    # sacc.fit(onlyEdges[:, 0, 1], onlyEdges[:, 0, 1])
-    # y_line = sacc.predict()
+def ransac(onlyEdges):
+
     n = onlyEdges.shape[0]
     delta = 10
     maxN = 0
     s = 0
-    while s < 20:
+    if n == 0:
+        return 0, 0, onlyEdges
+    bestPts = (np.zeros(2), np.zeros(2))
+    while s < 15:
         s+=1
+
         # sample 2 points
         index1 = random.randint(0, n-1)
         index2 = random.randint(0, n-1) 
-        # while onlyEdges[index2, 0, 0] == onlyEdges[index1, 0, 0]:
-            # index2 = random.randint(0, n-1)
         
-        pt1 = np.array(onlyEdges[index1, 0, :])
-        pt2 = np.array(onlyEdges[index2, 0, :])
-        # print(pt1)
-        # print(pt2)
+        pt1 = np.array(onlyEdges[index1, :])
+        pt2 = np.array(onlyEdges[index2, :])
+
         # find line eq
         # (m, b) = lineFromPoints(pt1, pt2)
         # (bUpper, bLower) = boundaryLines((m,b), delta)
+
         # score the line eq
         N = 0
-        for i in range(0,n,10):
-            pt3 = np.array(onlyEdges[i, 0, :])
+        for i in range(n):
+            pt3 = np.array(onlyEdges[i, :])
             if np.abs(np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1)) < delta:
                 N += 1
         if N > maxN:
             bestPts = (pt1, pt2)
             maxN = N
 
+    # linear fit inliers
     X = np.empty(maxN)
     Y = np.empty(maxN)
     (pt1, pt2) = (bestPts[0], bestPts[1])
     counter = 0
-    for i in range(0,n,10):
-        pt3 = np.array(onlyEdges[i, 0, :])
+    iRange = []
+    for i in range(n):
+        pt3 = np.array(onlyEdges[i, :])
         dist = np.abs(np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1))
         if dist < delta:
-            X[counter] = (onlyEdges[i, 0, 0])
-            Y[counter] = (onlyEdges[i, 0, 1])
-            cv.circle(img, (int(X[counter]), int(Y[counter])), 0, (0, 0, 255), -1)
+            X[counter] = (onlyEdges[i, 0])
+            Y[counter] = (onlyEdges[i, 1])
+            iRange.append(i)
             counter += 1
+    if X.size == 0 or Y.size == 0:
+        return 0, 0, onlyEdges
     poly = np.polyfit(X, Y, 1)
-    return poly[0], poly[1], img
+    onlyEdges = np.delete(onlyEdges, iRange, 0)
+    return poly[0], poly[1], onlyEdges
 
+def vertices(linecoords):
+    minDiff = np.inf
+    vortex = np.empty((4, 3))
+    for i in range(1,4):
+        diff = np.abs(linecoords[0, 0] - linecoords[i, 0])
+        if diff < minDiff:
+            i1 = i
+            minDiff = diff
+    firstIteration = True
+    for i in range(1,4):
+        if i != i1 and firstIteration:
+            vortex[0, :] = np.cross(linecoords[0, :], linecoords[i, :])
+            vortex[1, :] = np.cross(linecoords[i1, :], linecoords[i, :])
+            firstIteration = False
+        elif i != i1:
+            vortex[2, :] = np.cross(linecoords[0, :], linecoords[i, :])
+            vortex[3, :] = np.cross(linecoords[i1, :], linecoords[i, :])
+    for i in range(4):
+        vortex[i, :] = vortex[i, :] / vortex[i, 2]
+    vortex = vortex.astype(int)
+    return np.delete(vortex, 2, 1)
+            
+    
+    
 def main():
     vid = cv.VideoCapture(0)
     font = cv.FONT_HERSHEY_SIMPLEX
@@ -97,11 +113,29 @@ def main():
         thrs1 = cv.getTrackbarPos('thrs1', 'edge')
         thrs2 = cv.getTrackbarPos('thrs2', 'edge')
         edges = cv.Canny(gray, thrs1, thrs2, apertureSize=5)
-        (m, b, img) = ransac(edges, img)
-        C = 1000
-        pt1 = (C, int(m*C+b))
-        pt2 = ((-1)*C, int(m*(-1)*C+b))
-        # cv.line(img, pt1, pt2, color=(0,0,255), thickness=2)
+        
+        onlyEdges = cv.findNonZero(edges)
+        U = np.empty((4,3))
+        if(cv.countNonZero(edges) != 0):
+            n = onlyEdges.shape[0]
+            onlyEdges = onlyEdges[:n:25, 0]
+            for i in range(4):
+                if(cv.countNonZero(edges) == 0):
+                    b = 0
+                    m = 0
+                    break
+                else:
+                    (m, b, onlyEdges) = ransac(onlyEdges)
+                    U[i, :] = (m, -1, b)
+                    # C = 1000
+                    # pt1 = (C, int(m*C+b))
+                    # pt2 = ((-1)*C, int(m*(-1)*C+b))
+                    # cv.line(img, pt1, pt2, color=(0,0,255), thickness=2)
+        vert = vertices(U)
+        for i in range(4):
+            cv.circle(img, vert[i, :], 5, (0, 0, 255), 2)
+
+
         cv.putText(img, 'FPS = '+ str(int(fps)), (450,50), font, 1, (255, 255, 255), 2, cv.LINE_AA)
         cv.imshow('edge', img)
         end = time.time()
