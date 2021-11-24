@@ -18,7 +18,7 @@ def boundaryLines(eq, delta):
 
     return b+bDelta, b-bDelta
 
-def ransac(edges):
+def ransac(edges, img):
     bestPts = np.array([0, 0]), np.array([0, 0])
     if(cv.countNonZero(edges) == 0):
         return 0, 0
@@ -36,7 +36,7 @@ def ransac(edges):
     # sacc.fit(onlyEdges[:, 0, 1], onlyEdges[:, 0, 1])
     # y_line = sacc.predict()
     n = onlyEdges.shape[0]
-    delta = 1
+    delta = 10
     maxN = 0
     s = 0
     while s < 20:
@@ -58,7 +58,7 @@ def ransac(edges):
         N = 0
         for i in range(n):
             pt3 = np.array(onlyEdges[i, 0, :])
-            if np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1) < delta:
+            if np.abs(np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1)) < delta:
                 N += 1
         if N > maxN:
             bestPts = (pt1, pt2)
@@ -70,28 +70,40 @@ def ransac(edges):
     counter = 0
     for i in range(n):
         pt3 = np.array(onlyEdges[i, 0, :])
-        if np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1) < delta:
+        dist = np.abs(np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1))
+        if dist < delta:
             X[counter] = (onlyEdges[i, 0, 0])
             Y[counter] = (onlyEdges[i, 0, 1])
+            cv.circle(img, (int(X[counter]), int(Y[counter])), 0, (0, 0, 255), -1)
             counter += 1
     poly = np.polyfit(X, Y, 1)
-    return poly[0], poly[1]
+    return poly[0], poly[1], img
 
 def main():
     vid = cv.VideoCapture(0)
     font = cv.FONT_HERSHEY_SIMPLEX
     fps = 0
+
+    def nothing(*arg):
+        pass
+
+    cv.namedWindow('edge')
+    cv.createTrackbar('thrs1', 'edge', 2000, 5000, nothing)
+    cv.createTrackbar('thrs2', 'edge', 4000, 5000, nothing)
     while True:
         start = time.time()
         _flag, img = vid.read()
-        edges = cv.Canny(img, 500, 500)
-        # (m, b) = ransac(edges)
-        # C = 1000
-        # pt1 = (C, int(m*C+b))
-        # pt2 = ((-1)*C, int(m*(-1)*C+b))
-        # cv.line(img, pt1, pt2, color=(0,0,255), thickness=2)
-        cv.putText(edges, 'FPS = '+ str(int(fps)), (450,50), font, 1, (255, 255, 255), 2, cv.LINE_AA)
-        cv.imshow('video', edges)
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        thrs1 = cv.getTrackbarPos('thrs1', 'edge')
+        thrs2 = cv.getTrackbarPos('thrs2', 'edge')
+        edges = cv.Canny(gray, thrs1, thrs2, apertureSize=5)
+        (m, b, img) = ransac(edges, img)
+        C = 1000
+        pt1 = (C, int(m*C+b))
+        pt2 = ((-1)*C, int(m*(-1)*C+b))
+        cv.line(img, pt1, pt2, color=(0,0,255), thickness=2)
+        cv.putText(img, 'FPS = '+ str(int(fps)), (450,50), font, 1, (255, 255, 255), 2, cv.LINE_AA)
+        cv.imshow('edge', img)
         end = time.time()
         fps = 1 / (end-start)
 
