@@ -19,8 +19,9 @@ def boundaryLines(eq, delta):
     return b+bDelta, b-bDelta
 
 def ransac(edges):
+    bestPts = np.array([0, 0]), np.array([0, 0])
     if(cv.countNonZero(edges) == 0):
-        return (0, 0)
+        return 0, 0
     onlyEdges = cv.findNonZero(edges)
     # print(onlyEdges[:, 0, 1])
     # rows, columns = edges.shape
@@ -35,11 +36,10 @@ def ransac(edges):
     # sacc.fit(onlyEdges[:, 0, 1], onlyEdges[:, 0, 1])
     # y_line = sacc.predict()
     n = onlyEdges.shape[0]
-    delta = 20
+    delta = 1
     maxN = 0
     s = 0
-    bestLine = (0, 0)
-    while s < 200:
+    while s < 20:
         s+=1
         # sample 2 points
         index1 = random.randint(0, n-1)
@@ -47,21 +47,35 @@ def ransac(edges):
         # while onlyEdges[index2, 0, 0] == onlyEdges[index1, 0, 0]:
             # index2 = random.randint(0, n-1)
         
-        pt1 = onlyEdges[index1, 0, :]
-        pt2 = onlyEdges[index2, 0, :]
-
+        pt1 = np.array(onlyEdges[index1, 0, :])
+        pt2 = np.array(onlyEdges[index2, 0, :])
+        # print(pt1)
+        # print(pt2)
         # find line eq
-        (m, b) = lineFromPoints(pt1, pt2)
-        (bUpper, bLower) = boundaryLines((m,b), delta)
+        # (m, b) = lineFromPoints(pt1, pt2)
+        # (bUpper, bLower) = boundaryLines((m,b), delta)
         # score the line eq
         N = 0
         for i in range(n):
-            if (onlyEdges[i, 0, 1] < m*onlyEdges[i, 0, 0] + bUpper) and (onlyEdges[i, 0, 1] > m*onlyEdges[i, 0, 0] + bLower):
+            pt3 = np.array(onlyEdges[i, 0, :])
+            if np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1) < delta:
                 N += 1
         if N > maxN:
-            bestLine = (m, b)
+            bestPts = (pt1, pt2)
             maxN = N
-    return bestLine
+
+    X = np.empty(maxN)
+    Y = np.empty(maxN)
+    (pt1, pt2) = (bestPts[0], bestPts[1])
+    counter = 0
+    for i in range(n):
+        pt3 = np.array(onlyEdges[i, 0, :])
+        if np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1) < delta:
+            X[counter] = (onlyEdges[i, 0, 0])
+            Y[counter] = (onlyEdges[i, 0, 1])
+            counter += 1
+    poly = np.polyfit(X, Y, 1)
+    return poly[0], poly[1]
 
 def main():
     vid = cv.VideoCapture(0)
@@ -70,13 +84,14 @@ def main():
     while True:
         start = time.time()
         _flag, img = vid.read()
-        edges = cv.Canny(img, 400, 400)
-        (m, b) = ransac(edges)
-        pt1 = (-100, int(m*(-100)+b))
-        pt2 = (800, int(m*(800)+b))
-        cv.line(img, pt1, pt2, color=(0,0,255), thickness=5)
-        cv.putText(img, 'FPS = '+ str(int(fps)), (450,50), font, 1, (255, 255, 255), 2, cv.LINE_AA)
-        cv.imshow('video', img)
+        edges = cv.Canny(img, 500, 500)
+        # (m, b) = ransac(edges)
+        # C = 1000
+        # pt1 = (C, int(m*C+b))
+        # pt2 = ((-1)*C, int(m*(-1)*C+b))
+        # cv.line(img, pt1, pt2, color=(0,0,255), thickness=2)
+        cv.putText(edges, 'FPS = '+ str(int(fps)), (450,50), font, 1, (255, 255, 255), 2, cv.LINE_AA)
+        cv.imshow('video', edges)
         end = time.time()
         fps = 1 / (end-start)
 
