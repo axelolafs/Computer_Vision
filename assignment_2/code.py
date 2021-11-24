@@ -56,7 +56,7 @@ def ransac(edges, img):
         # (bUpper, bLower) = boundaryLines((m,b), delta)
         # score the line eq
         N = 0
-        for i in range(n):
+        for i in range(0,n,10):
             pt3 = np.array(onlyEdges[i, 0, :])
             if np.abs(np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1)) < delta:
                 N += 1
@@ -68,7 +68,7 @@ def ransac(edges, img):
     Y = np.empty(maxN)
     (pt1, pt2) = (bestPts[0], bestPts[1])
     counter = 0
-    for i in range(n):
+    for i in range(0,n,10):
         pt3 = np.array(onlyEdges[i, 0, :])
         dist = np.abs(np.cross(pt2-pt1,pt3-pt1)/np.linalg.norm(pt2-pt1))
         if dist < delta:
@@ -101,7 +101,7 @@ def main():
         C = 1000
         pt1 = (C, int(m*C+b))
         pt2 = ((-1)*C, int(m*(-1)*C+b))
-        cv.line(img, pt1, pt2, color=(0,0,255), thickness=2)
+        # cv.line(img, pt1, pt2, color=(0,0,255), thickness=2)
         cv.putText(img, 'FPS = '+ str(int(fps)), (450,50), font, 1, (255, 255, 255), 2, cv.LINE_AA)
         cv.imshow('edge', img)
         end = time.time()
