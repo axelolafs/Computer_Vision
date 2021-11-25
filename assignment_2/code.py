@@ -132,12 +132,16 @@ def main():
                     # pt2 = ((-1)*C, int(m*(-1)*C+b))
                     # cv.line(img, pt1, pt2, color=(0,0,255), thickness=2)
         vert = vertices(U)
+        pts_dst = np.array([[23, 97], [50, 428], [587, 448], [599, 85]])
+        print(vert)
+        h, status = cv.findHomography(vert, pts_dst)
+        img_out = cv.warpPerspective(img, h, (img.shape[0], img.shape[1]))
         for i in range(4):
-            cv.circle(img, vert[i, :], 5, (0, 0, 255), 2)
+            cv.circle(img, vert[i, :], 4, (0, 0, 255), -1)
 
 
         cv.putText(img, 'FPS = '+ str(int(fps)), (450,50), font, 1, (255, 255, 255), 2, cv.LINE_AA)
-        cv.imshow('edge', img)
+        cv.imshow('edge', img_out)
         end = time.time()
         fps = 1 / (end-start)
 
