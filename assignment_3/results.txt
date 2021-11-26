@@ -1,0 +1,7 @@
+With an image size of 320, I achieved a framerate of about 4-5 FPS, with the tiny image I got around 15 FPS.
+
+I then did a test for recall, where I placed Scissors in the scene and moved them around, I measured 200 frames where they were correctly identified,
+over 230 frames thus a recall of 200/230 = 87%
+Then I did a different test for precision and moved my hands in the scene and counted the frames in which something else than a person was identified,
+I counted for 50 frames my hands were identified as something else than hands and for 168 frames they were correctly identified as a person,
+thus a precision of 168/(168+50) = 77%
